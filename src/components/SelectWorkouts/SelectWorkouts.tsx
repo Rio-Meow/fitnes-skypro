@@ -1,0 +1,117 @@
+'use client';
+
+import { getWorkautInfo } from '@/services/workouts/workoutsApi';
+import styles from './selectWorkouts.module.css';
+import { getNameWorkaut, getString } from '@/utils/croppingLines';
+import { useAppSelector } from '@/store/store';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import {
+  setCourseWorkouts,
+  setFetchIsLoading,
+  setSelectedWorkout,
+  setSelectWorkoutId,
+} from '@/store/features/CourseSlice';
+import { AxiosError } from 'axios';
+import { Bounce, toast } from 'react-toastify';
+import { catchError } from '@/hooks/funcToast';
+
+type SelectWorkoutsTypeProp = {
+  courseName: string;
+};
+
+export default function SelectWorkouts({ courseName }: SelectWorkoutsTypeProp) {
+  const router = useRouter();
+  const dispatch = useDispatch();
+
+  const { courseWorkouts } = useAppSelector((state) => state.courses);
+  const { token } = useAppSelector((state) => state.auth);
+
+  const [selectedId, setSelectedId] = useState('');
+  const [error, setError] = useState('');
+
+  const getLessonNumber = (name: string): number => {
+    const match = name.match(/Урок (\d+)/);
+    return match ? parseInt(match[1], 10) : 999; 
+  };
+
+  const sortedWorkouts = [...courseWorkouts].sort((a, b) => {
+    const numA = getLessonNumber(a.name);
+    const numB = getLessonNumber(b.name);
+    return numA - numB;
+  });
+
+  const openWorkout = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    e.stopPropagation();
+    getWorkautInfo(token, selectedId)
+      .then((res) => {
+        dispatch(setSelectedWorkout(res));
+        dispatch(setSelectWorkoutId(selectedId));
+      })
+      .catch((error) => {
+        if (error instanceof AxiosError) {
+          if (error.response) {
+            setError(error.response.data.message);
+            catchError(error.response.data.message);
+          } else if (error.request) {
+            setError('Отсутствует интернет. Попробуйте позже');
+            catchError('Отсутствует интернет. Попробуйте позже');
+          } else {
+            setError('Неизвестная ошибка');
+            catchError('Неизвестная ошибка');
+          }
+        }
+      })
+      .finally(() => {
+        setFetchIsLoading(false);
+        router.push(`/courses/workout/${selectedId}`);
+      });
+  };
+
+  return (
+    <div className={styles.selectWorkouts}>
+      <div className={styles.selectWorkouts__container}>
+        <h2 className={styles.selectWorkouts__title}>Выберите тренировку</h2>
+        <div className={styles.selectWorkouts__box}>
+          {sortedWorkouts.map((workout, id) => {
+            const isSelected = workout._id === selectedId;
+            return (
+              <label
+                key={workout._id}
+                className={styles.selectWorkouts__workaut}
+              >
+                <input
+                  type="radio"
+                  name="workout"
+                  className={styles.radio}
+                  checked={isSelected}
+                  onChange={() => setSelectedId(workout._id)}
+                />
+                <div className={styles.workaut__info}>
+                  <div className={styles.workaut__name}>
+                    <p className={styles.name__text}>
+                      {getNameWorkaut(workout.name)}
+                    </p>
+                  </div>
+                  <div className={styles.workaut__subtitle}>
+                    <p className={styles.subtitle__text}>
+                      {getString(workout.name, courseName, id)}
+                    </p>
+                  </div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        <button
+          className={styles.selectWorkouts__button}
+          onClick={openWorkout}
+          disabled={!selectedId}
+        >
+          Начать
+        </button>
+      </div>
+    </div>
+  );
+}
