@@ -80,11 +80,9 @@ const courseSlice = createSlice({
     },
     setSelectCourseId: (state, action: PayloadAction<string>) => {
       state.selectCourseId = action.payload;
-      localStorage.setItem('selectCourseId', action.payload);
     },
     setSelectWorkoutId: (state, action: PayloadAction<string>) => {
       state.selectWorkoutId = action.payload;
-      localStorage.setItem('selectWorkoutId', action.payload);
     },
     setCourseProgress: (state, action: PayloadAction<CourseProgressType>) => {
       state.courseProgress = action.payload;
