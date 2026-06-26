@@ -8,7 +8,6 @@ import { WorkoutProgressType, WorksType } from '@/sharedTypes/types';
 import {
   setSelectedWorkout,
   setWorkoutProgress,
-  setSelectCourseId,
 } from '@/store/features/CourseSlice';
 import { useAppSelector } from '@/store/store';
 import { AxiosError } from 'axios';
@@ -27,25 +26,24 @@ export default function WorkoutPage() {
   const [workProgress, setWorkProgress] = useState<WorkoutProgressType | null>(
     null,
   );
-  const [courseId, setCourseId] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState<string | null>('');
 
   const workoutId = params?.id ?? '';
 
   useEffect(() => {
-    if (!workoutId || !token) return;
+    if (params?.id) {
+      const courseId = localStorage.getItem('selectCourseId');
+      setCourseId(courseId);
+    }
+  }, [params]);
+
+  useEffect(() => {
+    if (!workoutId || !token || !courseId) return;
 
     getWorkautInfo(token, workoutId)
       .then((res) => {
         dispatch(setSelectedWorkout(res));
         setWorkout(res);
-        
-        if (res.courseId) {
-          setCourseId(res.courseId);
-          dispatch(setSelectCourseId(res.courseId)); 
-        } else {
-          setError('Не удалось определить курс');
-          catchError('Не удалось определить курс');
-        }
       })
       .catch((error) => {
         if (error instanceof AxiosError) {
@@ -61,11 +59,6 @@ export default function WorkoutPage() {
           }
         }
       });
-  }, [workoutId, token, dispatch]);
-
-  useEffect(() => {
-
-    if (!workoutId || !token || !courseId) return;
 
     getWorkoutProgress(token, courseId, workoutId)
       .then((res) => {
@@ -86,15 +79,7 @@ export default function WorkoutPage() {
           }
         }
       });
-  }, [token, workoutId, courseId, dispatch]);
-
-  if (!workout) {
-    return <div>Загрузка тренировки...</div>;
-  }
-
-  if (error) {
-    return <div>Ошибка: {error}</div>;
-  }
+  }, [token, workoutId, dispatch, courseId]);
 
   return <Workout />;
 }
